@@ -4,13 +4,16 @@ from util.Config_loader import Config_loader
 from PIL import Image
 
 class File_util():
-    year=time.strftime("%Y", time.localtime())
-    month=time.strftime("%m", time.localtime())
-    day=time.strftime("%d", time.localtime())
+    year=""
+    month=""
+    day=""
     root_path=""
     path_delimiter=""
 
     def __init__(self):
+        self.year=time.strftime("%Y", time.localtime())
+        self.month=time.strftime("%m", time.localtime())
+        self.day=time.strftime("%d", time.localtime())
         self.path_delimiter=os.sep
         loader=Config_loader()
         base_path=loader.get_root_path()

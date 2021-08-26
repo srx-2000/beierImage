@@ -78,7 +78,7 @@ class db_client():
         data = self.cursor.fetchone()
         return data
 
-    def select_single_image_by_date(self,year,month,day):
+    def select_single_image_by_date(self,year=None,month=None,day=None):
         use_db_sql = "use " + self.db_name
         self.cursor.execute(use_db_sql)
         sql = "select * from image"
@@ -89,10 +89,17 @@ class db_client():
                 if day!=None:
                     sql=sql+" and `day`="+day
             self.cursor.execute(sql)
-            data = self.cursor.fetchone()
+            data = self.cursor.fetchall()
             return data
         else:
             self.cursor.execute(sql)
-            data = self.cursor.fetchone()
+            data = self.cursor.fetchall()
             return data
 
+    def query_count(self):
+        use_db_sql = "use " + self.db_name
+        self.cursor.execute(use_db_sql)
+        sql = "select count(*) from image"
+        self.cursor.execute(sql)
+        data = self.cursor.fetchone()
+        return data

@@ -46,7 +46,7 @@ class Config_loader:
         return self.__db_username
 
     def get_server_host(self):
-        return self.__server_host
+        return str(self.__server_host)
 
     def get_server_port(self):
-        return self.__server_port
+        return str(self.__server_port)
