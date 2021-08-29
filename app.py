@@ -17,6 +17,7 @@ from util.File_util import File_util
 from util.Code_util import Code_util
 from db.db_client import db_client
 from util.Config_loader import Config_loader
+from util.logHandler import LogHandler
 import os
 
 
@@ -24,6 +25,7 @@ app = Flask(__name__)
 client=db_client()
 client.init_db()
 loader=Config_loader()
+log=LogHandler("image_bed.log")
 
 api_list = [
     {"url": "/upload","method":"post","params": "image:file", "desc": "上传一个图片【upload single image】"},
@@ -42,18 +44,20 @@ def upload():
     file = File_util()
     code = Code_util()
     img = request.files.get('image')
-    if code.encode(img.filename)[1]:
-        file_name=img.filename
-        image_uuid=code.encode(file_name)[0]
-        file_path =file.get_path(image_uuid)
-        img.save(file_path)
-        uuid=image_uuid.split(".")[0]
-        flag=client.insert_single_image(img.filename,uuid,file_path,file.year,file.month,file.day)
-        if flag:
-            return jsonify({"image_name":img.filename,"image_uuid":uuid,"url":"/show/"+uuid,"download_url":"/download/"+uuid,"status":"success"})
-        return jsonify({"image_name":img.filename,"status":"fail"})
-    else:
-        return jsonify({"image_name":img.filename,"status":"fail"})
+    if img!=None:
+        if code.encode(img.filename)[1]:
+            file_name=img.filename
+            image_uuid=code.encode(file_name)[0]
+            file_path =file.get_path(image_uuid)
+            img.save(file_path)
+            uuid=image_uuid.split(".")[0]
+            flag=client.insert_single_image(img.filename,uuid,file_path,file.year,file.month,file.day)
+            if flag:
+                return jsonify({"image_name":img.filename,"image_uuid":uuid,"url":"/show/"+uuid,"download_url":"/download/"+uuid,"status":"success"})
+            return jsonify({"image_name":img.filename,"status":"fail"})
+        else:
+            return jsonify({"image_name":img.filename,"status":"fail"})
+    return jsonify({"message":"please enter a file"})
 
 @app.route('/all',methods=["get"])
 def show_all_info():
@@ -104,6 +108,17 @@ def download(imageid):
             dir = path_delimiter.join(dir_list[0:-1])
             return send_from_directory(dir, dir_list[-1], as_attachment=True)
 
+# 服务器出错，使用日志进行记录
+@app.errorhandler(500)
+def error_log(error):
+    print(error)
+    log.error(error)
+    return jsonify({"message":"server error,contact admin please"})
+
+# 用户输入不规范
+@app.errorhandler(404)
+def no_found(message):
+    return jsonify({"message":"bad request,check your enter"})
 
 if __name__ == '__main__':
     app.run(host=loader.get_server_host(),port=loader.get_server_port())
