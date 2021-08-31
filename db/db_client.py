@@ -8,8 +8,8 @@ class db_client():
     db_username=""
     db_password=""
     loader=Config_loader()
-    db=""
-    cursor=""
+    # db=""
+    # cursor=""
 
     def __init__(self):
         self.host=self.loader.get_db_host()
@@ -17,17 +17,26 @@ class db_client():
         self.db_name=self.loader.get_db_name()
         self.db_username=self.loader.get_db_username()
         self.db_password=self.loader.get_db_password()
-        self.db = pymysql.connect(host=self.host, port=self.port, user=self.db_username, passwd=self.db_password, charset='utf8')
-        self.cursor = self.db.cursor()
+
+    def __get_connect(self):
+        db = pymysql.connect(host=self.host, port=self.port, user=self.db_username, passwd=self.db_password, charset='utf8')
+        cursor = db.cursor()
+        use_db_sql = "use " + self.db_name
+        cursor.execute(use_db_sql)
+        return db
+
 
 
     def init_db(self):
-        self.cursor.execute("drop database if exists "+self.db_name)
+        db = pymysql.connect(host=self.host, port=self.port, user=self.db_username, passwd=self.db_password,
+                             charset='utf8')
+        cursor = db.cursor()
+        cursor.execute("drop database if exists "+self.db_name)
         create_db_sql = "create database "+self.db_name
-        self.cursor.execute(create_db_sql)
+        cursor.execute(create_db_sql)
         use_db_sql="use "+self.db_name
-        self.cursor.execute(use_db_sql)
-        self.cursor.execute("drop table if exists image")
+        cursor.execute(use_db_sql)
+        cursor.execute("drop table if exists image")
         create_table_sql = """
         CREATE TABLE image (
 	        image_id INT PRIMARY KEY AUTO_INCREMENT COMMENT "主键",
@@ -39,67 +48,79 @@ class db_client():
 	        `day` INT NOT NULL COMMENT "图片存储日份"
         )
         """
-        self.cursor.execute(create_table_sql)
+        cursor.execute(create_table_sql)
+        db.close()
 
 
     def insert_single_image(self,image_name,image_uuid,image_dir,year,month,day):
-        use_db_sql = "use " + self.db_name
-        self.cursor.execute(use_db_sql)
+        db = self.__get_connect()
+        cursor = db.cursor()
         sql = "insert into image(image_name,image_uuid,image_dir,`year`,`month`,`day`) values " \
               "('{image_name}','{image_uuid}','{image_dir}','{year}','{month}','{day}')"\
             .format(image_name=image_name,image_uuid=image_uuid,image_dir=image_dir,year=year,month=month,day=day)
         sql=sql.replace("\\","\\\\")
-        self.cursor.execute(sql)
-        self.db.commit()
+        cursor.execute(sql)
+        db.commit()
         data=self.select_single_image_by_id(image_uuid)
-        if data!=None:
-            return True
-        else:
-            return False
+        try:
+            if data!=None:
+                return True
+            else:
+                return False
+        finally:
+            db.close()
 
     def delete_single_image(self,image_id):
-        use_db_sql = "use " + self.db_name
-        self.cursor.execute(use_db_sql)
+        db = self.__get_connect()
+        cursor = db.cursor()
         sql = " delete from employee where image_uuid="+image_id
-        self.cursor.execute(sql)
-        self.db.commit()
+        cursor.execute(sql)
+        db.commit()
         # 查看更新后的结果
         data=self.select_single_image_by_id(image_id)
-        if data!=None:
-            return True
-        else:
-            return False
+        try:
+            if data!=None:
+                return True
+            else:
+                return False
+        finally:
+            db.close()
 
     def select_single_image_by_id(self,image_id):
-        use_db_sql = "use " + self.db_name
-        self.cursor.execute(use_db_sql)
+        db = self.__get_connect()
+        cursor = db.cursor()
         sql = "select * from image where image_uuid='%s'"%(image_id)
-        self.cursor.execute(sql)
-        data = self.cursor.fetchone()
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        db.close()
         return data
 
     def select_single_image_by_date(self,year=None,month=None,day=None):
-        use_db_sql = "use " + self.db_name
-        self.cursor.execute(use_db_sql)
+        db = self.__get_connect()
+        cursor = db.cursor()
         sql = "select * from image"
-        if year!=None:
-            sql = sql+" where `year`="+year
-            if month!=None:
-                sql=sql+" and `month`="+month
-                if day!=None:
-                    sql=sql+" and `day`="+day
-            self.cursor.execute(sql)
-            data = self.cursor.fetchall()
-            return data
-        else:
-            self.cursor.execute(sql)
-            data = self.cursor.fetchall()
-            return data
+        try:
+            if year!=None:
+                sql = sql+" where `year`="+year
+                if month!=None:
+                    sql=sql+" and `month`="+month
+                    if day!=None:
+                        sql=sql+" and `day`="+day
+                cursor.execute(sql)
+                data = cursor.fetchall()
+                return data
+            else:
+                cursor.execute(sql)
+                data = cursor.fetchall()
+                return data
+        finally:
+            db.close()
 
     def query_count(self):
-        use_db_sql = "use " + self.db_name
-        self.cursor.execute(use_db_sql)
+        db = self.__get_connect()
+        cursor = db.cursor()
         sql = "select count(*) from image"
-        self.cursor.execute(sql)
-        data = self.cursor.fetchone()
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        db.close()
         return data
